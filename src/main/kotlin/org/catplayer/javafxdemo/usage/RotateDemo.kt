@@ -14,7 +14,7 @@ import org.catplayer.javafxdemo.StageHandler
 
 class RotateDemo : StageHandler {
     override val order: Int
-        get() = 1
+        get() = Int.MIN_VALUE
 
     override fun handle(stage: Stage, scene: Scene) {
 

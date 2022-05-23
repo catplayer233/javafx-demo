@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.jar.JarEntry
+import java.util.jar.JarFile
 import java.util.stream.Collectors
 import kotlin.io.path.exists
 
@@ -78,17 +78,30 @@ object ResourceUtils {
 
 internal abstract class ClassPathEntry {
 
+    companion object {
+        private const val PERIOD = '.'
+    }
+
 
     abstract fun searchClassesName(packageName: String): List<String>
+
+    fun cleanPackagePath(packageName: String): String {
+
+        return if (packageName.isEmpty()) {
+            packageName
+        } else {
+            val separatorChar = File.separatorChar
+            packageName.replace(PERIOD, separatorChar)
+        }
+    }
+
+    fun cleanClassFileName(classFileName: String) =
+        classFileName.replace(File.separatorChar, PERIOD)
 
 
 }
 
 internal class FileClassPathEntry(fileRootPath: String) : ClassPathEntry() {
-
-    companion object {
-        private const val PERIOD = '.'
-    }
 
     private val rootPath: String = if (fileRootPath.endsWith(File.separatorChar)) fileRootPath.substring(
         0,
@@ -107,7 +120,7 @@ internal class FileClassPathEntry(fileRootPath: String) : ClassPathEntry() {
             1,
             { t, _ ->
                 t.toFile().let {
-                    it.isFile && it.name.endsWith(".class") && !it.name.contains("$")//exclude inner class
+                    it.isFile && it.name.endsWith(".class")
                 }
             }).use {
             it.map { path ->
@@ -119,24 +132,22 @@ internal class FileClassPathEntry(fileRootPath: String) : ClassPathEntry() {
 
     }
 
-    private fun cleanPackagePath(packageName: String): String {
-
-        return if (packageName.isEmpty()) {
-            packageName
-        } else {
-            val separatorChar = File.separatorChar
-            packageName.replace(PERIOD, separatorChar)
-        }
-    }
 }
 
 internal class JarArchiveClassPathEntry(jarPath: String) : ClassPathEntry() {
 
-    private val jar: JarEntry = JarEntry(jarPath)
+    private val jar: JarFile = JarFile(jarPath)
 
     override fun searchClassesName(packageName: String): List<String> {
-        /*TODO later implement*/
-        return emptyList()
+
+        val packagePath = cleanPackagePath(packageName)
+
+        return jar.stream().filter {
+            val entryName = it.name
+            entryName.startsWith(packagePath) && entryName.endsWith(".class")
+        }.map {
+            cleanClassFileName(it.name.substringBefore(".class"))
+        }.collect(Collectors.toList())
     }
 }
 

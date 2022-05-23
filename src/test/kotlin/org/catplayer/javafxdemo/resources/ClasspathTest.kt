@@ -15,4 +15,16 @@ class ClasspathTest {
             println(className)
         }
     }
+
+    @Test
+    fun `get classes name in jar file`() {
+
+        ResourceUtils.searchClassNames(
+            "org.intellij.lang.annotations",
+            ClasspathTest::class.java.classLoader
+        ) { className, _ ->
+            println(className)
+        }
+
+    }
 }
